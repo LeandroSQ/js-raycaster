@@ -6,6 +6,8 @@ A [Wolfenstein 3D](https://en.wikipedia.org/wiki/Wolfenstein_3D) inspired [raytr
 	<img src=".github/screenshot01.png"/>
 </center>
 
+[Live demo here](https://leandrosq.github.io/js-raytracer/)
+
 ## Stack
 | Name | Description |
 | -- | -- |
@@ -16,6 +18,7 @@ A [Wolfenstein 3D](https://en.wikipedia.org/wiki/Wolfenstein_3D) inspired [raytr
 | Sass | Superset of CSS |
 | Gulp | For building tooling |
 | Pure HTML5 Canvas API | For graphics |
+| Github actions | For CI, building and deploying to github pages |
 
 ## Building sources
 
