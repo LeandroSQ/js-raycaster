@@ -1,0 +1,2 @@
+@import"https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap";*{font-family:"Bebas Neue",cursive;box-sizing:border-box;padding:0px;margin:0px}body,html{width:100vw;height:100vh}canvas{position:absolute}canvas#minimap{top:0px;right:0px;margin-top:5pt;margin-right:5pt;padding:1pt;background-color:rgba(0,0,0,.75)}canvas#main{width:100vw;height:100vh;top:0px;left:0px}
+/*# sourceMappingURL=style.css.map */
