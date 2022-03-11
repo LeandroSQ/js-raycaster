@@ -20,7 +20,7 @@ A [Wolfenstein 3D](https://en.wikipedia.org/wiki/Wolfenstein_3D) inspired [raytr
 ## Building sources
 
 - `yarn install` to install dependencies
-- `yarn build` to build sources
+- `gulp build` to build sources
 - Open the `index.html` file at `/dist/index.html`
 
-For dev environment, you can use `yarn dev` to run the server and live reload on changes.
+For dev environment, you can use `gulp dev` to run the server and live reload on changes.
