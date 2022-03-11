@@ -12,7 +12,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [14.x, 16.x]
+        node-version: [14.x]
     
     steps:
     - uses: actions/checkout@v2
@@ -26,11 +26,12 @@ jobs:
       run: |
         npm install
         gulp build
+        mv dist docs
       
     - name: Deploy to GitHub Pages
       uses: JamesIves/github-pages-deploy-action@v4.2.5
       with:
         branch: gh-pages
-        folder: dist
+        folder: docs
 
     
