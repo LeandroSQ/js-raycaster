@@ -6,7 +6,7 @@ A [Wolfenstein 3D](https://en.wikipedia.org/wiki/Wolfenstein_3D) inspired [rayca
 	<img src=".github/screenshot01.png"/>
 </center>
 
-[Live demo here](https://leandrosq.github.io/js-raytracer/)
+[Live demo here](https://leandrosq.github.io/js-raycaster/)
 
 ## Stack
 | Name | Description |
