@@ -8,8 +8,9 @@ const browserify = require("browserify");
 const source = require("vinyl-source-stream");
 const buffer = require("vinyl-buffer");
 const babelify = require("babelify");
-const minifyCSS = require("gulp-clean-css");
-const cssAutoPrefixer = require("gulp-autoprefixer");
+const sass = require("gulp-sass")(require("sass"));
+const typescript = require("gulp-typescript");
+const tsify = require("tsify");
 const concat = require("gulp-concat");
 
 // Options
@@ -28,44 +29,53 @@ const htmlOptions = {
 };
 
 const babelOptions = {
-	babelrc: true
+	babelrc: true,
+	extensions: [".ts"]
 };
 
 const cssOptions = {
-
+	outputStyle: "compressed",
+	sourceComments: false,
+	sourceMap: false
 };
+
+const tsOptions = typescript.createProject("tsconfig.json", { noResolve: true });
 
 // Tasks
 function reload() {
 	return browserSync.reload({ stream: true });
 }
 
-function handleHtml() {
-	return src("src/**/*.html")
+function handleHTML() {
+	return src("src/views/*.html")
 		.pipe(htmlMinify(htmlOptions))
 		.pipe(dest("./dist"))
 		.pipe(reload());
 }
 
-function watchHtml() {
-	return watch("src/**/*.html", handleHtml);
+function watchHTML() {
+	return watch("src/views/*.html", handleHTML);
 }
 
-function handleJs() {
-
-	return browserify("./src/script/main.js", { debug: true })
+function handleTS() {
+	return browserify("./src/scripts/main.ts", { debug: false })
+		.plugin(tsify)
 		.transform(babelify, babelOptions)
 		.bundle()
+		.on("error", function (e) {
+			console.error(e);
+			this.emit("end");
+		})
 		.pipe(source("bundle.js"))
 		.pipe(buffer())
 		.pipe(sourcemaps.init({ loadMaps: true }))
 		.pipe(sourcemaps.write("./"))
-		.pipe(dest("./dist/script"))
+		.pipe(dest("./dist"))
 		.pipe(reload());
 }
 
-function watchJs() {
-	return watch("src/**/*.js", handleJs);
+function watchTS() {
+	return watch("src/**/*.ts", handleTS);
 }
 
 function handleAssets() {
@@ -79,18 +89,17 @@ function watchAssets() {
 }
 
 function handleCSS() {
-	return src("./src/style/**.*")
+	return src("./src/styles/**.scss")
 		.pipe(sourcemaps.init())
-		.pipe(minifyCSS(cssOptions))
-		.pipe(cssAutoPrefixer())
-		.pipe(concat("style.min.css"))
+		.pipe(sass(cssOptions).on("error", sass.logError))
+		.pipe(concat("style.css"))
 		.pipe(sourcemaps.write("./"))
-		.pipe(dest("./dist/style"))
+		.pipe(dest("./dist"))
 		.pipe(reload());
 }
 
 function watchCSS() {
-	return watch("./src/style/**.*", handleCSS);
+	return watch("./src/styles/**.scss", handleCSS);
 }
 
 function clean() {
@@ -103,10 +112,10 @@ function initialize() {
 
 // Export tasks
 module.exports.assets = handleAssets;
-module.exports.html = handleHtml;
-module.exports.js = handleJs;
+module.exports.html = handleHTML;
+module.exports.ts = handleTS;
 module.exports.css = handleCSS;
 module.exports.clean = clean;
-module.exports.default = series(clean, parallel(handleAssets, handleCSS, handleHtml, handleJs));
+module.exports.default = series(clean, parallel(handleAssets, handleCSS, handleHTML, handleTS));
 module.exports.build = module.exports.default;
-module.exports.dev = series(module.exports.default, parallel(watchAssets, watchCSS, watchHtml, watchJs, initialize));
+module.exports.dev = series(module.exports.default, parallel(watchAssets, watchCSS, watchHTML, watchTS, initialize));

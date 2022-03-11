@@ -3,13 +3,13 @@
         [
             "@babel/preset-env",
             {
-                "shippedProposals": true
+				"shippedProposals": true
             }
         ]
     ],
 	"plugins": [
 		[
-			"@babel/plugin-transform-runtime",
+			"@babel/plugin-transform-typescript",
 			{
 				"regenerator": true
 			}
