@@ -17,7 +17,7 @@ const RAY_MAX_DISTANCE = 10;
 
 export class Main {
 
-	canvas: ScaledCanvas;
+	canvas: DensityCanvas;
 	minimapCanvas: DensityCanvas;
 
 	map: MapController = new MapController();
@@ -27,6 +27,8 @@ export class Main {
 	frame: FrameController = new FrameController();
 
 	needToRender = true;
+
+	fov: number = 60;
 
 	constructor() {
 		// Initialize the controllers
@@ -55,7 +57,7 @@ export class Main {
 
 	private setupCanvas() {
 		// Create the canvas
-		this.canvas = new ScaledCanvas("main");
+		this.canvas = new DensityCanvas("main");
 		this.canvas.attachToElement(document.body);
 	}
 
@@ -74,6 +76,11 @@ export class Main {
 		// Set the minimap size
 		const size = Math.min(body.clientWidth, body.clientHeight) * 0.25;
 		this.minimapCanvas.setSize(size, size);
+
+		// Dynamically calculate the fov based on the canvas width
+		this.fov = Math.clampAngle(
+			Math.clamp((this.canvas.width * 65) / 1920, 55, 70).toRadians()
+		);
 	}
 
 	private onDestroy() {
@@ -209,8 +216,8 @@ export class Main {
 	}
 
 	private castRays() {
-		const fovRadians = (60).toRadians();
-		const rayCount = this.canvas.width / 4;
+		const fovRadians = this.fov;
+		const rayCount = this.canvas.width / 2;
 		const rayGap = fovRadians / rayCount;
 
 		// Pre-calculate the cell-size for the minimap
