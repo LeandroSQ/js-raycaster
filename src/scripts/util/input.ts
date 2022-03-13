@@ -18,6 +18,7 @@ export class Input {
 		window.addEventListener("keydown", this.onKey.bind(this));
 
 		// Attach the mouse event listeners
+		window.addEventListener("pointerdown", this.onMouseMove.bind(this));
 		window.addEventListener("pointermove", this.onMouseMove.bind(this));
 	}
 
@@ -27,6 +28,7 @@ export class Input {
 		window.removeEventListener("keydown", this.onKey.bind(this));
 	}
 
+	//#region Keyboard
 	private static onKey(event) {
 		// Handle keys that are present in more than one side of the keyboard
 		let code = event.code;
@@ -69,14 +71,6 @@ export class Input {
 		}
 	}
 
-	private static onMouseMove(event) {
-		let position = new Vector2(event.clientX, event.clientY);
-		let difference = Vector2.subtract(position, Input.mouse);
-
-		this.mouseAxis = difference;
-		this.mouse = position;
-	}
-
 	static isKeyDown(key: Keys) {
 		return this.pressedKeys.indexOf(key) !== -1;
 	}
@@ -93,9 +87,20 @@ export class Input {
 	static resetAllKeys() {
 		this.pressedKeys = [];
 	}
+	//#endregion
+
+	//#region Mouse
+	private static onMouseMove(event) {
+		let position = new Vector2(event.clientX, event.clientY);
+		let difference = Vector2.subtract(position, Input.mouse);
+
+		this.mouseAxis = difference;
+		this.mouse = position;
+	}
 
 	static resetAxis() {
 		this.mouseAxis = Vector2.zero();
 	}
+	//#endregion
 
 }
