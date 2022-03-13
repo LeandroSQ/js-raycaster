@@ -16,6 +16,8 @@ const concat = require("gulp-concat");
 // Options
 const browserSyncOptions = {
 	browser: false,
+	ui: false,
+	host: "0.0.0.0",
 	server: {
 		baseDir: "./dist",
 		port: 3000
