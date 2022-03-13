@@ -3,7 +3,10 @@
 	"version": "1.0.0",
 	"description": "Simple raycaster",
 	"main": "index.html",
-	"scripts": {},
+	"scripts": {
+		"dev": "gulp dev",
+		"build": "gulp build"
+	},
 	"keywords": [
 		"Raycaster",
 		"JavaScript",
