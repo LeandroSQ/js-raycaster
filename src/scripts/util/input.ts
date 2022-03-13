@@ -18,8 +18,12 @@ export class Input {
 		window.addEventListener("keydown", this.onKey.bind(this));
 
 		// Attach the mouse event listeners
-		window.addEventListener("mousemove", this.onMouseMove.bind(this));
-		window.addEventListener("pointerdown", this.onMouseUp.bind(this));
+		// window.addEventListener("mousemove", this.onMouseMove.bind(this));
+		window.addEventListener("pointermove", this.onMouseMove.bind(this));
+		// window.addEventListener("mousedown", this.onMouseDown.bind(this));
+		// window.addEventListener("pointerdown", this.onMouseDown.bind(this));
+		// window.addEventListener("mouseup", this.onMouseUp.bind(this));
+		// window.addEventListener("pointerup", this.onMouseUp.bind(this));
 	}
 
 	static destroy() {
@@ -70,20 +74,25 @@ export class Input {
 		}
 	}
 
-	private static onMouseUp(event) {
-		console.log(event);
+	private static onMouseDown(event) {
+		console.log(`Mouse down:`, event);
+		if (event.button === 0 || event.pointerId) {
+			this.isCapturingMouse = true;
+			// event.target.setPointerCapture(event.pointerId || 1);
+		}
+	}
 
-		if (event.button == 0) {
-			this.isCapturingMouse = !this.isCapturingMouse;
-			if (this.isCapturingMouse) {
-				event.target.setPointerCapture(event.pointerId || 1);
-			} else {
-				event.target.releasePointerCapture(event.pointerId || 1);
-			}
+	private static onMouseUp(event) {
+		console.log(`Mouse up:`, event);
+		if (event.button === 0 || event.pointerId) {
+			this.isCapturingMouse = false;
+			// event.target.releasePointerCapture(event.pointerId || 1);
 		}
 	}
 
 	private static onMouseMove(event) {
+		console.log(`Mouse move:`, event);
+
 		let position = new Vector2(event.clientX, event.clientY);
 		let difference = Vector2.subtract(position, Input.mouse);
 
