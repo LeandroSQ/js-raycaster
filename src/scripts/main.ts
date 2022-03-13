@@ -1,3 +1,4 @@
+import { RayHit } from './model/ray-hit';
 import { Color } from './util/color';
 import { ScaledCanvas } from './widget/scaled-canvas';
 import { Keys } from './enum/keys';
@@ -11,6 +12,8 @@ import "./extension/math";
 import { Input } from "./util/input";
 import { DensityCanvas } from "./widget/density-canvas";
 import { Blocks } from './enum/blocks';
+
+const RAY_MAX_DISTANCE = 10;
 
 export class Main {
 
@@ -94,27 +97,7 @@ export class Main {
 		this.frame.endFrame(this.onUpdate.bind(this));
 	}
 
-	private castRay(angle: number, precision: number) {
-		const position = this.player.position.clone();
-		const direction = new Vector2(
-			Math.cos(angle) / precision,
-			Math.sin(angle) / precision
-		);
-
-		for (let iteration = 0; iteration < precision * 20; iteration++) {
-			position.add(direction);
-
-			const block = this.map.get(position);
-			if (block != Blocks.Air) return {
-				position,
-				distance: this.player.position.distance(position)
-			};
-		}
-
-		return null;
-	}
-
-	private drawRayMinimap(hit: { position: Vector2, distance: number }, cell: Vector2) {
+	private drawRayMinimap(hit: RayHit, cell: Vector2) {
 		this.minimapCanvas.context.drawLine(
 			Vector2.multiply(this.player.position, cell),
 			Vector2.multiply(hit.position, cell),
@@ -122,7 +105,7 @@ export class Main {
 		);
 	}
 
-	private drawRayWall(hit: { position: Vector2, distance: number },rayCount: number, index: number) {
+	private drawRayWall(hit: RayHit, rayCount: number, index: number) {
 		// Constants
 		const maxDistance = Math.PI * 2;
 		const wallPadding = 1;
@@ -134,12 +117,16 @@ export class Main {
 		const x = index * wallWidth - wallPadding / 2;
 
 		// Draw wall
-		const shade = Math.clamp(Math.clamp(hit.distance, 0, maxDistance) / maxDistance, 0.15, 1.0) * 90;
+		const shade = Math.clamp(
+			Math.clamp(hit.distance, 0, maxDistance) / maxDistance,
+			0.15,
+			1.0
+		) * 80 + (hit.isHorizontal ? 10 : 0);
 		context.fillStyle = Color.darken("#ff4757", shade);
 		context.fillRect(x, this.canvas.height / 2 - wallHeight / 2 - 1, wallWidth + wallPadding, wallHeight + 2);
 	}
 
-	private compensateFishEye(rayAngle: number, hit: { position: Vector2, distance: number }) {
+	private compensateFishEye(rayAngle: number, hit: { position: Vector2, distance: number; }) {
 		let angleDiff = Math.clampAngle(this.player.angle - rayAngle);
 		hit.distance *= Math.cos(angleDiff);
 	}
@@ -156,140 +143,94 @@ export class Main {
 		context.fillRect(0, this.canvas.height / 2, this.canvas.width, this.canvas.height / 2);
 	}
 
-	private castRays() {
-		const precision = 64;
-		const fov = (60).toRadians();
-		const count = this.canvas.width / 6;
-		const gap = fov / count;
+	private castRay(angle: number) {
+		// Define the starting position
+		const from = this.player.position.clone();
+		// Calculate the ray direction
+		const direction = new Vector2(Math.cos(angle), Math.sin(angle)).normalize();
+		// Calculate the size of each grid tile
+		const unitStepSize = new Vector2(
+			Math.abs(1.0 / direction.x),
+			Math.abs(1.0 / direction.y)
+		);
 
-		let rayAngle = this.player.angle - (fov / 2);
+		// Stores the current position, truncated as integer
+		const current = new Vector2(Math.floor(from.x), Math.floor(from.y));
 
-		const cell = this.map.getCellSize(this.minimapCanvas);
+		// Determines the direction of the steps, forward or backward
+		const step = new Vector2(
+			Math.sign(direction.x),
+			Math.sign(direction.y)
+		);
 
-		for (let i = 0; i < count; i++) {
-			const hit = this.castRay(rayAngle, precision);
+		// Initializes the offset from the current grid tile that the ray is currently on
+		const length = new Vector2(
+			direction.x < 0 ? (from.x - current.x) * unitStepSize.x : (current.x + 1.0 - from.x) * unitStepSize.x,
+			direction.y < 0 ? (from.y - current.y) * unitStepSize.y : (current.y + 1.0 - from.y) * unitStepSize.y,
+		);
 
-			if (hit) {
-				this.drawRayMinimap(hit, cell);
-				this.compensateFishEye(rayAngle, hit);
-				this.drawRayWall(hit, count, i);
+		// Walks trough the grid in the direction of given angle
+		// Uses DDA algorithm
+		let distance = 0;
+		let found = false;
+		let isHorizontal = false;
+		while (!found && distance < RAY_MAX_DISTANCE) {
+			// Walks the shortest path
+			if (length.x < length.y) {
+				current.x += step.x; // Increases the current index
+				distance = length.x; // Stores the traveled distance
+				length.x += unitStepSize.x; // Increases the offset
+
+				isHorizontal = true;
+			} else {
+				current.y += step.y; // Increases the current index
+				distance = length.y; // Stores the traveled distance
+				length.y += unitStepSize.y; // Increases the offset
+
+				isHorizontal = false;
 			}
 
-			rayAngle = Math.clampAngle(rayAngle + gap);
+			// Check if the current position is a wall
+			const block = this.map.get(current.x, current.y);
+			if (block != Blocks.Air) found = true;
 		}
+
+		// Calculate the intersection
+		if (found) {
+			return new RayHit(
+				new Vector2(from.x + direction.x * distance, from.y + direction.y * distance),
+				distance,
+				isHorizontal,
+				!isHorizontal
+			);
+		}
+
+		return null;
 	}
 
-/* 	private castRays () {
-		const gridSize = (this.map.width * this.map.height);
+	private castRays() {
+		const fovRadians = (60).toRadians();
+		const rayCount = this.canvas.width / 4;
+		const rayGap = fovRadians / rayCount;
 
-		let fov = 30;
-		let rayCount = 60;
-		let rayOffset = fov / this.canvas.width;
-		let rayAngle = this.player.angle - (rayOffset * rayCount) / 2;
-		let rayPosition = Vector2.zero();
-		// let rayOffset = Vector2.zero();
-		let mapPosition = Vector2.zero();
-		let depthOfField = 0;
+		// Pre-calculate the cell-size for the minimap
+		const cellSize = this.map.getCellSize(this.minimapCanvas);
 
-		const context = this.minimapCanvas.context;
+		// Define the start angle
+		let rayAngle = this.player.angle - fovRadians / 2;
 
-		for (let ray = 0; ray < rayCount; ray++) {
-			depthOfField = 0;
+		for (let i = 0; i < rayCount; i++) {
+			const hit = this.castRay(rayAngle);
 
-			rayPosition = this.player.position.clone();
-
-			let rayCos = Math.cos(rayAngle) / gridSize;
-			let raySin = Math.sin(rayAngle) / gridSize;
-
-			for (let iteration = 0; iteration < gridSize * 20; iteration++) {
-				rayPosition.x += rayCos;
-				rayPosition.y += raySin;
-
-				let block = this.map.get(Math.floor(rayPosition.x), Math.floor(rayPosition.y));
-				if (block != Blocks.Air) {
-					if (ray == 0) console.log("Took " + iteration + " iterations to hit a block");
-					break;
-				}
+			if (hit) {
+				this.drawRayMinimap(hit, cellSize);
+				this.compensateFishEye(rayAngle, hit);
+				this.drawRayWall(hit, rayCount, i);
 			}
 
-			context.strokeStyle = "#D82148";
-			context.fillStyle = "#D82148";
-
-			let tmp = this.map.localizeVector(this.player.position, this.canvas, this.minimapCanvas);
-			const cw = this.map.getCellWidth(this.minimapCanvas.width);
-			const ch = this.map.getCellHeight(this.minimapCanvas.height);
-
-			context.beginPath();
-			context.moveTo(this.player.position.x * cw, this.player.position.y * ch);
-			context.lineTo(rayPosition.x * this.map.getCellWidth(this.minimapCanvas.width), rayPosition.y * this.map.getCellHeight(this.minimapCanvas.height));
-			context.stroke();
-			context.closePath();
-
-			context.beginPath();
-			context.arc(rayPosition.x * cw, rayPosition.y * ch, 3, 0, 2 * Math.PI);
-			context.fill();
-
-
-			// context.fillRect(Math.floor(rayPosition.x * cw), Math.floor(rayPosition.y * ch), cw, ch);
-
-			let distance = Math.sqrt(Math.pow(this.player.position.x - rayPosition.x, 2) + Math.pow(this.player.position.y - rayPosition.y, 2));
-			let wallHeight = Math.floor(this.canvas.height / 2 / distance);
-			rayAngle += rayOffset;
-
-			// let aTan = -1 / Math.tan(rayAngle);
-
-			/* if (rayAngle > Math.PI) {// Looking down
-				// Calculate the ray position
-				rayPosition.y = Math.floor(Math.round(this.player.position.y / gridSize) * gridSize);
-				rayPosition.x = Math.floor((this.player.position.y - rayPosition.y) * aTan + this.player.position.x);
-
-				// Calculate the ray offset
-				rayOffset.y = -gridSize;
-				rayOffset.x = -rayOffset.y * aTan;
-			} else if (rayAngle < Math.PI) {// Looking up
-				// Calculate the ray position
-				rayPosition.y = Math.floor(Math.round(this.player.position.y / gridSize) * gridSize + gridSize);
-				rayPosition.x = Math.floor((this.player.position.y - rayPosition.y) * aTan + this.player.position.x);
-
-				// Calculate the ray offset
-				rayOffset.y = gridSize;
-				rayOffset.x = -rayOffset.y * aTan;
-			} else if (rayAngle == 0 || rayAngle == Math.PI) {// Looking right or left
-				rayPosition.x = this.player.position.x;
-				rayPosition.y = this.player.position.y;
-				depthOfField = 8;
-			}
-
-			while (depthOfField < 8) {
-				mapPosition.x = Math.floor(Math.round(rayPosition.x / gridSize));
-				mapPosition.y = Math.floor(Math.round(rayPosition.y / gridSize));
-				const index = mapPosition.y * this.map.width + mapPosition.x;
-
-				if (index < gridSize && this.map.get(mapPosition.x, mapPosition.y) == Blocks.Solid) {
-					depthOfField = 8;// Hit a wall
-					console.log("Hit a wall at " + mapPosition.x + ", " + mapPosition.y);
-				} else {
-					rayPosition.x += rayOffset.x;
-					rayPosition.y += rayOffset.y;
-					depthOfField++;
-				}
-			}
+			rayAngle = Math.clampAngle(rayAngle + rayGap);
 		}
-
-		/* const context = this.minimapCanvas.context;
-		const convertHorizontal = (x: number) => (x / parseFloat(this.map.width)) * this.minimapCanvas.width;
-		const convertVertical = (y: number) => (y / parseFloat(this.map.height)) * this.minimapCanvas.height;
-
-		context.strokeStyle = "green";
-		context.beginPath();
-		context.moveTo(convertHorizontal(this.player.position.x), convertVertical(this.player.position.y));
-		context.lineTo(convertHorizontal(rayPosition.x), convertVertical(rayPosition.y));
-		context.stroke();
-
-		context.fillStyle = "pink";
-		context.fillRect(convertHorizontal(mapPosition.x), convertVertical(mapPosition.y), this.map.getCellWidth(this.minimapCanvas.width), this.map.getCellHeight(this.minimapCanvas.height));
-
-	} */
+	}
 
 	private onRender() {
 		// Renders the minimap
